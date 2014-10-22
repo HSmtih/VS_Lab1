@@ -1,5 +1,7 @@
 package client;
 
+import general.IConstants;
+
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -8,82 +10,78 @@ import java.rmi.registry.Registry;
 import server.MessageService;
 import server.Server;
 
-public class ClientModel {
+public class ClientModel implements IConstants {
 
-	/**
-	 * @param args
-	 */
-	private final long retryTimeout=3000;
-	private final int maxRetries=5;
-	
-	MessageService server;
-	private String addr = "sdasd";		// Serveradresse
-	int s = 3; // max Serverausfallzeit
-	ClientApp controller;
+    MessageService server;
+    ClientApp controller;
 
-	public ClientModel(ClientApp controller) {
-		this.controller = controller;
-		if (System.getSecurityManager() == null) {
-			System.setSecurityManager(new SecurityManager());
+    private String lastMsg;
+
+    public ClientModel(ClientApp controller) {
+
+	if (controller == null) {
+	    throw new IllegalArgumentException("Invalid ClientApp object");
+	}
+
+	if (System.getSecurityManager() == null) {
+	    System.setSecurityManager(new SecurityManager());
+	}
+
+	this.controller = controller;
+	this.lastMsg = "";
+    }
+
+    public void verbinden(String addr) throws RemoteException,
+	    NotBoundException {
+	if (addr == null || addr.isEmpty()) {
+	    return;
+	}
+
+	Registry registry = LocateRegistry.getRegistry(addr);
+	server = (Server) registry.lookup(SERVER_NAME);
+    }
+
+    public void get_all_msg(String clientID) throws RemoteException {
+
+	StringBuilder tmp = new StringBuilder();
+	while (server.nextMessage(clientID) != null) {
+	    System.out.println(server.nextMessage(clientID));
+	    tmp.append(server.nextMessage(clientID) + "\n");
+	}
+
+	this.lastMsg = tmp.toString();
+    }
+
+    public void send_msg(String empf, String inhalt) {
+
+	int triesLeft = MAX_RETRIES;
+	do {
+	    try {
+		server.newMessage(empf, inhalt);
+
+		System.out.println("Message sent!");
+		break;
+	    } catch (RemoteException ex) {
+		triesLeft--;
+
+		System.out.println("Failed to send message.");
+		System.out.println("Retries left: " + triesLeft);
+	    }
+
+	    try {
+		if (triesLeft > 0) {
+		    System.out.println("Waiting for " + RETRY_TIMEOUT
+			    + "ms before next retry...");
+		    wait(RETRY_TIMEOUT);
 		}
-		try {			
-			//verbinden();
+	    } catch (InterruptedException e) {
+		e.printStackTrace();
+	    }
 
-		} catch (Exception e) {
-			System.err.println("Client exception:");
-			e.printStackTrace();
-		}
+	} while (triesLeft > 0);
+    }
 
-	}
-
-	public void verbinden(String addr) throws RemoteException, NotBoundException {
-		this.addr=addr;
-		String name = "Server";
-		Registry registry = LocateRegistry.getRegistry(addr);
-		server = (Server) registry.lookup(name);
-	}
-
-	public void get_all_msg(String clientID) throws RemoteException {
-		String tmp = new String();
-		while (server.nextMessage(clientID) != null) {
-			System.out.println(server.nextMessage(clientID));
-			tmp = tmp + server.nextMessage(clientID) +"\n";
-		}
-		
-
-	}
-
-	public  void send_msg(String empf, String inhalt) {
-		// TODO Serverausfälle abfangen
-		
-		int triesLeft = maxRetries;
-		
-		do {
-			try {
-				server.newMessage(empf, inhalt);
-				
-				System.out.println("Message sent!");
-				break;
-			}
-			catch (RemoteException ex) {
-				triesLeft--;
-				
-				System.out.println("Failed to send message.");
-				System.out.println("Retries left: " + triesLeft);
-			}
-						
-			try {
-				if (triesLeft > 0)
-				{
-					System.out.println("Waiting for " + retryTimeout + "ms before next retry...");
-					wait(retryTimeout);
-				}
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			
-		} while (triesLeft > 0);
-
-	}
-
+    public String getLastMessages() {
+	return lastMsg;
+    }
 }
