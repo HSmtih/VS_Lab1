@@ -1,3 +1,7 @@
+package server;
+
+import general.Message;
+
 import java.awt.List;
 import java.io.IOException;
 import java.rmi.RemoteException;
@@ -12,6 +16,8 @@ import java.util.Timer;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
+
+//-Djava.security.policy=policy.policy
 
 public class Server extends UnicastRemoteObject implements MessageService {
 	private HashMap<String, LinkedList<Message>> client_nachrichten = new HashMap<>();

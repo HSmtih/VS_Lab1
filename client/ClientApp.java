@@ -1,5 +1,9 @@
+package client;
+
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+
+// -Djava.security.policy=policy.policy
 
 public class ClientApp {
 	private ClientModel model;
