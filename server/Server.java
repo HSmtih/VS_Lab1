@@ -54,7 +54,7 @@ public class Server extends UnicastRemoteObject implements MessageService, ICons
 	    Registry registry = LocateRegistry.createRegistry(Registry.REGISTRY_PORT);
 	    registry = LocateRegistry.getRegistry();
 	    registry.rebind(SERVER_NAME, engine);
-	    System.out.println("Server bound");
+	    log.info("Server bound successfully");
 	} catch (Exception e) {
 	    System.err.println("Server exception:");
 	    e.printStackTrace();
@@ -66,21 +66,21 @@ public class Server extends UnicastRemoteObject implements MessageService, ICons
 
 	String erg;
 
-	if (client_nachrichten.get(clientID) == null) {
-	    log.warning("No list for " + clientID + " found!");
+	LinkedList<Message> clientList = client_nachrichten.get(clientID);
+	if (clientList == null) {
+	    log.warning("No list for (" + clientID + ") found!");
 	    return null;
 	}
 
-	log.info("List for " + clientID + " found");
+	log.info("List for (" + clientID + ") found.\nList contains: " + clientList.size() + " messages");
 
 	if (client_nachrichten.get(clientID).isEmpty()) {
-	    log.info("List for " + clientID + " contains 0 messages");
 	    return null;
 	}
 
 	erg = client_nachrichten.get(clientID).pollFirst().getText();
-	System.out.println(erg);
-
+	log.info("Message retrieved for (" + clientID + "): " + erg);
+	
 	// Timer zur�cksetzen
 	resetClientTimer(clientID);
 	return erg;
