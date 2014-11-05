@@ -23,9 +23,9 @@ public class ClientModel implements IConstants {
 	    throw new IllegalArgumentException("Invalid ClientApp object");
 	}
 
-	if (System.getSecurityManager() == null) {
-	    System.setSecurityManager(new SecurityManager());
-	}
+//	if (System.getSecurityManager() == null) {
+//	    System.setSecurityManager(new SecurityManager());
+//	}
 
 	this.controller = controller;
 	this.lastMsg = "";
@@ -38,7 +38,7 @@ public class ClientModel implements IConstants {
 	}
 
 	Registry registry = LocateRegistry.getRegistry(addr);
-	server = (Server) registry.lookup(SERVER_NAME);
+	server = (MessageService) registry.lookup(SERVER_NAME);
     }
 
     public void get_all_msg(String clientID) throws RemoteException {
