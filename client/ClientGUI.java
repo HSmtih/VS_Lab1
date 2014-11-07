@@ -98,12 +98,6 @@ public class ClientGUI extends JFrame implements Observer {
 		hauptpane.add(untenPane, BorderLayout.SOUTH);
 		untenPane.setLayout(new BorderLayout(0, 0));
 
-		/*
-		 * JPanel obenButtonPane = new JPanel(); obenButtonPane.setLayout(new
-		 * BoxLayout(obenButtonPane, BoxLayout.Y_AXIS));
-		 * obenPane.add(obenButtonPane, BorderLayout.WEST);
-		 */
-
 		/* Buttons */
 		JButton verbindenButton = new JButton("Verbinden");
 		verbindenButton.addActionListener(e -> {

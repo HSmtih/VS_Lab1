@@ -38,7 +38,6 @@ public class ClientApp extends Observable {
 
 	public void textAnzeigen(String ID) throws RemoteException,
 			NotBoundException {
-		// model.verbinden(ID);
 	}
 
 	public String getLastMessages() {

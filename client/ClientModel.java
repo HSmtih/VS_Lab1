@@ -48,13 +48,8 @@ public class ClientModel implements IConstants {
 			    }
 			} );
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
-		// if (System.getSecurityManager() == null) {
-		// System.setSecurityManager(new SecurityManager());
-		// }
 
 		this.controller = controller;
 		this.lastMsg = "";

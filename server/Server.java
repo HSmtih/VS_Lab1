@@ -18,8 +18,6 @@ import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
 
-//-Djava.security.policy=policy.policy
-
 public class Server extends UnicastRemoteObject implements MessageService,
 		IConstants {
 
@@ -45,14 +43,8 @@ public class Server extends UnicastRemoteObject implements MessageService,
 
 		log.addHandler(handler);
 
-		// if (System.getSecurityManager() == null) {
-		// System.setSecurityManager(new SecurityManager());
-		// }
-
 		try {
 			Server engine = new Server();
-			// Server stub = (Server) UnicastRemoteObject.exportObject(engine,
-			// 0);
 			Registry registry = LocateRegistry
 					.createRegistry(Registry.REGISTRY_PORT);
 			registry = LocateRegistry.getRegistry();
@@ -127,10 +119,6 @@ public class Server extends UnicastRemoteObject implements MessageService,
 	}
 
 	private void resetClientTimer(String clientID) {
-
-//		if (!client_timer.containsKey(clientID)) {
-//			return;
-//		}
 
 		Timer timer = client_timer.get(clientID); // alten Timer abbrechen
 		if (timer != null) {
