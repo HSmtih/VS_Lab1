@@ -18,131 +18,131 @@ import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
 
-//-Djava.security.policy=policy.policy
+public class Server extends UnicastRemoteObject implements MessageService,
+		IConstants {
 
-public class Server extends UnicastRemoteObject implements MessageService, IConstants {
+	private static final Logger log = Logger.getLogger(Server.class.getName());
 
-    private static final Logger log = Logger.getLogger(Server.class.getName());
-    
-    private HashMap<String, LinkedList<Message>> client_nachrichten = new HashMap<>();
-    private HashMap<String, Timer> client_timer = new HashMap<>();
-    
-    private int msg_ID = 0;
+	private HashMap<String, LinkedList<Message>> client_nachrichten = new HashMap<>();
+	private HashMap<String, Timer> client_timer = new HashMap<>();
 
-    public Server() throws RemoteException {
-	super();
-    }
+	private int msg_ID = 0;
 
-    public static void main(String[] args) {
-
-	Handler handler = null;
-	try {
-	    handler = new FileHandler(LOG_FILE_PATH);
-	} catch (IOException e1) {
-	    e1.printStackTrace();
+	public Server() throws RemoteException {
+		super();
 	}
 
-	log.addHandler(handler);
+	public static void main(String[] args) {
 
-	if (System.getSecurityManager() == null) {
-	    System.setSecurityManager(new SecurityManager());
+		Handler handler = null;
+		try {
+			handler = new FileHandler(LOG_FILE_PATH);
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+
+		log.addHandler(handler);
+
+		try {
+			Server engine = new Server();
+			Registry registry = LocateRegistry
+					.createRegistry(Registry.REGISTRY_PORT);
+			registry = LocateRegistry.getRegistry();
+			registry.rebind(SERVER_NAME, engine);
+			log.info("Server bound successfully");
+		} catch (Exception e) {
+			System.err.println("Server exception:");
+			e.printStackTrace();
+		}
 	}
 
-	try {
-	    Server engine = new Server();
-	    // Server stub = (Server) UnicastRemoteObject.exportObject(engine, 0);
-	    Registry registry = LocateRegistry.createRegistry(Registry.REGISTRY_PORT);
-	    registry = LocateRegistry.getRegistry();
-	    registry.rebind(SERVER_NAME, engine);
-	    log.info("Server bound successfully");
-	} catch (Exception e) {
-	    System.err.println("Server exception:");
-	    e.printStackTrace();
-	}
-    }
+	@Override
+	public String nextMessage(String clientID) throws RemoteException {
 
-    @Override
-    public String nextMessage(String clientID) throws RemoteException {
+		String erg;
 
-	String erg;
+		LinkedList<Message> clientList = client_nachrichten.get(clientID);
+		if (clientList == null) {
+			log.warning("No list for (" + clientID + ") found!");
+			return null;
+		}
 
-	LinkedList<Message> clientList = client_nachrichten.get(clientID);
-	if (clientList == null) {
-	    log.warning("No list for (" + clientID + ") found!");
-	    return null;
-	}
+		log.info("List for (" + clientID + ") found.\nList contains: "
+				+ clientList.size() + " messages");
 
-	log.info("List for (" + clientID + ") found.\nList contains: " + clientList.size() + " messages");
+		if (client_nachrichten.get(clientID).isEmpty()) {
+			System.out.println("No more message, returning NULL \n");
+			return null;
+		}
 
-	if (client_nachrichten.get(clientID).isEmpty()) {
-	    return null;
+		erg = client_nachrichten.get(clientID).pollFirst().getText();
+		log.info("Message retrieved for (" + clientID + "): " + erg);
+
+		// Timer zur�cksetzen
+		resetClientTimer(clientID);
+		System.out.println("Message returned: " + erg +"\n");
+		return erg;
 	}
 
-	erg = client_nachrichten.get(clientID).pollFirst().getText();
-	log.info("Message retrieved for (" + clientID + "): " + erg);
-	
-	// Timer zur�cksetzen
-	resetClientTimer(clientID);
-	return erg;
-    }
+	public void newMessage(final String clientID, String message)
+			throws RemoteException {
 
-    public void newMessage(final String clientID, String message)
-	    throws RemoteException {
+		log.info("newMessage() aufgrufen von: " + clientID);
+		System.out.println("Client: "+ clientID +"  sent Message: "+ message);
+		Message msg = new Message(message, ++msg_ID, new Date());
 
-	log.info("newMessage() aufgrufen von: " + clientID);
-	Message msg = new Message(message, ++msg_ID, new Date());
+		// Pr�fe ob Client bereits bekannt
+		if (client_nachrichten.get(clientID) == null) {
+			log.info(clientID + " bis nicht im System");
 
-	// Pr�fe ob Client bereits bekannt
-	if (client_nachrichten.get(clientID) == null) {
-	    log.info(clientID + " bis nicht im System");
+			// Falls neu, neuen Nachrichtenliste erstellen
+			LinkedList<Message> temp_list = new LinkedList<Message>();
+			temp_list.add(msg); // Nachricht anf�gen
+			client_nachrichten.put(clientID, temp_list); // Liste mit Client
+															// verkn�pfen
 
-	    // Falls neu, neuen Nachrichtenliste erstellen
-	    LinkedList<Message> temp_list = new LinkedList<Message>();
-	    temp_list.add(msg); // Nachricht anf�gen
-	    client_nachrichten.put(clientID, temp_list); // Liste mit Client verkn�pfen
+			resetClientTimer(clientID);
+		} else {
+			// Falls bekannt, Nachricht anf�gen
+			log.info(clientID + " wieder erkannt");
 
-	    resetClientTimer(clientID);
-	} else {
-	    // Falls bekannt, Nachricht anf�gen
-	    log.info(clientID + " wieder erkannt");
+			// Pr�fen on max L�nge erreicht
+			if (client_nachrichten.get(clientID).size() == MAX_QUEUE_LEN) {
+				client_nachrichten.get(clientID).removeFirst();
+			}
 
-	    // Pr�fen on max L�nge erreicht
-	    if (client_nachrichten.get(clientID).size() == MAX_QUEUE_LEN) {
-		client_nachrichten.get(clientID).removeFirst();
-	    }
+			client_nachrichten.get(clientID).add(msg);
+			resetClientTimer(clientID);
+		}
 
-	    client_nachrichten.get(clientID).add(msg);
-	    resetClientTimer(clientID);
+
 	}
 
-    }
+	private void resetClientTimer(String clientID) {
 
-    private void resetClientTimer(String clientID) {
+		Timer timer = client_timer.get(clientID); // alten Timer abbrechen
+		if (timer != null) {
+			timer.cancel();
+			System.out.println("Timer canceled: "+ clientID);
+		}
 
-	if (!client_timer.containsKey(clientID)) {
-	    return;
+		timer = new Timer(); // neuen Timer erstellen
+		timer.schedule(new Task(clientID), CLIENT_TIMEOUT);
+		System.out.println("Timer created: "+ clientID);
+		client_timer.put(clientID, timer);
 	}
 
-	Timer timer = client_timer.get(clientID); // alten Timer abbrechen
-	if (timer != null) {
-	    timer.cancel();
+	// Timerklasse zum vergessen eines Clients
+	class Task extends TimerTask {
+		String ID = new String();
+
+		Task(String ID) {
+			this.ID = ID;
+		}
+
+		public void run() {
+			client_nachrichten.remove(ID);
+			log.info("Client+Messages Deleted: "+ ID);
+		}
 	}
-
-	timer = new Timer(); // neuen Timer erstellen
-	timer.schedule(new Task(clientID), CLIENT_TIMEOUT);
-	client_timer.put(clientID, timer);
-    }
-
-    // Timerklasse zum vergessen eines Clients
-    class Task extends TimerTask {
-	String ID = new String();
-
-	Task(String ID) {
-	    this.ID = ID;
-	}
-
-	public void run() {
-	    client_nachrichten.remove(ID);
-	}
-    }
 }
